@@ -22,15 +22,19 @@ sh 4-stop-services.sh
 
 # To interact with the Nomad cluster, source .envrc first to configure the host + TLS
 source .envrc
+nomad job status
 ```
 
 ## What the cluster is running as jobs
 
-- Grafana, at [`grafana.service.consul:3000`](http://grafana.service.consul:3000)
+- Traefik, at [`0.0.0.0:8080`](http://localhost:8080) to act as a reverse proxy to all services
+  - Automatic routing to services registered with appropriate Nomad/Consul tags
+  - Check routing with e.g. `curl localhost:8080 -H "Host: grafana"`, or set up appropriate records in `/etc/hosts`
+- Grafana, at [`grafana.service.consul:3000`](http://grafana.service.consul:3000) within the service mesh, or at [`localhost:8080`](http://localhost:8080/) when proxied through Traefik
     - Configured data sources: Prometheus, Loki
 - Prometheus (with UI), at [`prometheus.service.consul:9090`](http://prometheus.service.consul:9090)
     - [Configured to scrape Nomad metrics](https://developer.hashicorp.com/nomad/tutorials/manage-clusters/prometheus-metrics#enable-telemetry-on-nomad-servers-and-clients)
-- Loki, at [`loki.service.consul:3100`](http://loki.service.consul:3100)
+- Loki, at [`loki.service.consul`](http://loki.service.consul), served from a dynamic port
     - Configured with the Loki docker driver to collect logs from all containers
 
 ## Rough architecture of components and how they communicate

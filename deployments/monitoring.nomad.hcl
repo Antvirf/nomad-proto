@@ -107,6 +107,7 @@ EOH
       provider = "consul"
       tags = [
         "traefik.enable=true",
+        "traefik.http.routers.grafana.rule=Host(`localhost`)"
       ]
     }
 
