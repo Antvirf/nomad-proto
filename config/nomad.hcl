@@ -49,8 +49,12 @@ plugin "docker" {
     logging {
       type = "loki"
       config {
-        loki-url = "http://loki.service.consul:3100/loki/api/v1/push"
-        labels   = "com.hashicorp.nomad.alloc_id,com.hashicorp.nomad.job_id,com.hashicorp.nomad.job_name,com.hashicorp.nomad.namespace,com.hashicorp.nomad.node_id,com.hashicorp.nomad.node_name,com.hashicorp.nomad.task_group_name,com.hashicorp.nomad.task_name"
+        loki-url         = "http://loki.service.consul:3100/loki/api/v1/push"
+        labels           = "com.hashicorp.nomad.alloc_id,com.hashicorp.nomad.job_id,com.hashicorp.nomad.job_name,com.hashicorp.nomad.namespace,com.hashicorp.nomad.node_id,com.hashicorp.nomad.node_name,com.hashicorp.nomad.task_group_name,com.hashicorp.nomad.task_name"
+        loki-retries     = 2
+        loki-max-backoff = "800ms"
+        loki-timeout     = "1s"
+        keep-file        = true
       }
     }
   }
