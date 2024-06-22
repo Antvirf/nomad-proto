@@ -1,0 +1,3 @@
+# Ignore certs, startup script will creat them
+*.pem
+
