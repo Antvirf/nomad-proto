@@ -4,23 +4,22 @@ job "monitoring" {
 
   group "prometheus" {
     network {
-      mode = "bridge"
       port "promport" {
         static = 9090
         to     = 9090
       }
     }
     service {
-      name         = "prometheus"
-      port         = "promport"
-      provider     = "consul"
-      address_mode = "alloc" # otherwise, Consul resolves this service to 127.0.0.1 instead
+      name     = "prometheus"
+      port     = "promport"
+      provider = "consul"
     }
 
     task "promcontainer" {
       driver = "docker"
       config {
-        image = "prom/prometheus:v2.53.0" # latest at time of writing
+        image        = "prom/prometheus:v2.53.0" # latest at time of writing
+        network_mode = "host"
         volumes = [
           "local/prometheus.yml:/etc/prometheus/prometheus.yml",
         ]
@@ -57,23 +56,22 @@ EOH
 
   group "loki" {
     network {
-      mode = "bridge"
       port "lokiport" {
         static = 3100
         to     = 3100
       }
     }
     service {
-      name         = "loki"
-      port         = "lokiport"
-      provider     = "consul"
-      address_mode = "alloc" # otherwise, Consul resolves this service to 127.0.0.1 instead
+      name     = "loki"
+      port     = "lokiport"
+      provider = "consul"
     }
 
     task "loki" {
       driver = "docker"
       config {
-        image = "grafana/loki:3.0.0" # latest at time of writing
+        network_mode = "host"
+        image        = "grafana/loki:3.0.0" # latest at time of writing
         // args = [
         //   "--config.file=/etc/loki/config/loki.yml",
         // ]
@@ -97,7 +95,6 @@ EOH
 
   group "grafana" {
     network {
-      mode = "bridge"
       port "http" {
         static = 3000
         to     = 3000
@@ -105,16 +102,19 @@ EOH
     }
 
     service {
-      name         = "grafana"
-      port         = "http"
-      provider     = "consul"
-      address_mode = "alloc" # otherwise, Consul resolves this service to 127.0.0.1 instead
+      name     = "grafana"
+      port     = "http"
+      provider = "consul"
+      tags = [
+        "traefik.enable=true",
+      ]
     }
 
     task "dashboard" {
       driver = "docker"
       config {
-        image = "grafana/grafana:10.4.4" # latest at time of writing
+        image        = "grafana/grafana:10.4.4" # latest at time of writing
+        network_mode = "host"
         volumes = [
           "local/grafana.ini:/etc/grafana/grafana.ini",
           "local/grafana-datasources.yml:/etc/grafana/provisioning/datasources/nomad-datasources.yml",

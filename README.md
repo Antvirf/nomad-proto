@@ -53,17 +53,13 @@ dnsmasq["dnsmasq"]
 consul["Consul"]
 
 subgraph docker["Docker engine"]
-
-    bridge["Docker bridge gateway"]
-
     subgraph containers["Containers"]
-        c["Any container ran by Nomad"]
+        c["Any container ran by Nomad\n(Network mode: host)"]
     end
 end
 
 %% Connections
-c --> |DNS request to 172.17.0.1|bridge
-bridge -->|Forward request to 127.0.0.1| dnsmasq
+c --> |DNS request to 127.0.0.1|dnsmasq
 dnsmasq --> |Forward requests under .consul to 127.0.0.1:8600|consul
 end
 dnsmasq --> |Forward all other requests to external DNS| cf
