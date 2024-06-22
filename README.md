@@ -16,8 +16,9 @@ sh 1-start-consul.sh
 # Open another terminal window for Nomad
 sh 2-start-nomad.sh
 
-# Open a third terminal window and then deploy services to Nomad
+# Open a third terminal window and then deploy/stop services on Nomad
 sh 3-deploy-services.sh
+sh 4-stop-services.sh
 
 # To interact with the Nomad cluster, source .envrc first to configure the host + TLS
 source .envrc
