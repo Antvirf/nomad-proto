@@ -7,12 +7,15 @@ job "monitoring" {
       port "promport" {
         static = 9090
         to     = 9090
-      }
+      } # Free to use any port here, as our references to it from Grafana use dynamic ports
     }
     service {
       name     = "prometheus"
       port     = "promport"
       provider = "consul"
+      tags = [
+        "traefik.enable=true",
+      ]
     }
 
     task "promcontainer" {
@@ -56,10 +59,7 @@ EOH
 
   group "loki" {
     network {
-      port "lokiport" {
-        static = 3100
-        to     = 3100
-      }
+      port "lokiport" {} # use a dynamic port to avoid clashes
     }
     service {
       name     = "loki"
@@ -139,14 +139,15 @@ EOH
       template {
         change_mode = "noop"
         destination = "local/grafana-datasources.yml"
-        data        = <<EOH
+        data        = <<EOT
 apiVersion: 1
 
 datasources:
   - name: Prometheus
     type: prometheus
     access: proxy
-    url: http://prometheus.service.consul:9090
+    # Resolving Prometheus using Nomad's own features, without consul
+    url: http://{{ range service "prometheus" }}{{ .Address }}{{ .Port }}{{ end }}
     jsonData:
       httpMethod: POST
       manageAlerts: true
@@ -154,11 +155,12 @@ datasources:
   - name: Loki
     type: loki
     access: proxy
-    url: http://loki.service.consul:3100
+    # Resolving Loki's IP via Consul, but dynamic port via Nomad
+    url: http://loki.service.consul:{{ range service "loki" }}{{ .Port }}{{ end }}
     jsonData:
       timeout: 60
       maxLines: 100
-EOH
+EOT
       }
     }
   }
