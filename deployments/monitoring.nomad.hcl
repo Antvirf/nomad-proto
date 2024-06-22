@@ -59,7 +59,11 @@ EOH
 
   group "loki" {
     network {
-      port "lokiport" {} # use a dynamic port to avoid clashes
+      # Needs to be static since the Docker Driver needs to know where to look
+      port "lokiport" {
+        to     = 3100
+        static = 3100
+      }
     }
     service {
       name     = "loki"
@@ -148,7 +152,7 @@ datasources:
     type: prometheus
     access: proxy
     # Resolving Prometheus using Nomad's own features, without consul
-    url: http://{{ range service "prometheus" }}{{ .Address }}{{ .Port }}{{ end }}
+    url: http://{{ range service "prometheus" }}{{ .Address }}:{{ .Port }}{{ end }}
     jsonData:
       httpMethod: POST
       manageAlerts: true

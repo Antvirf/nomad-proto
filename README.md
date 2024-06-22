@@ -34,7 +34,7 @@ nomad job status
     - Configured data sources: Prometheus, Loki
 - Prometheus (with UI), at [`prometheus.service.consul:9090`](http://prometheus.service.consul:9090)
     - [Configured to scrape Nomad metrics](https://developer.hashicorp.com/nomad/tutorials/manage-clusters/prometheus-metrics#enable-telemetry-on-nomad-servers-and-clients)
-- Loki, at [`loki.service.consul`](http://loki.service.consul), served from a dynamic port
+- Loki, at [`loki.service.consul:3100`](http://loki.service.consul:3100)
     - Configured with the Loki docker driver to collect logs from all containers
 
 ## Rough architecture of components and how they communicate
