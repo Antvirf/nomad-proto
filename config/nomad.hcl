@@ -1,6 +1,9 @@
-datacenter = "dc1"
-data_dir   = "/tmp/nomad"
-bind_addr  = "0.0.0.0"
+# Region/datacenter topology
+region     = "global" # Similar to AWS region
+datacenter = "dc1"    # Similar to AWS availability zone
+
+data_dir  = "/tmp/nomad"
+bind_addr = "0.0.0.0"
 
 server {
   enabled          = true
