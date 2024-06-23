@@ -4,6 +4,7 @@ job "traefik" {
   region      = "global"
   datacenters = ["dc1"]
   type        = "service"
+  namespace   = "default"
 
   update {
     max_parallel = 0 # force update instead of rolling deployment
@@ -47,27 +48,8 @@ job "traefik" {
       }
 
       template {
-        data = <<EOF
-[entryPoints]
-    [entryPoints.http]
-    address = ":8080"
-    [entryPoints.traefik]
-    address = ":8081"
-
-[api]
-    dashboard = true
-    insecure  = true
-
-# Enable Consul Catalog configuration backend.
-[providers.consulCatalog]
-    prefix           = "traefik"
-    exposedByDefault = false
-
-    [providers.consulCatalog.endpoint]
-      address = "127.0.0.1:8500"
-      scheme  = "http"
-EOF
-
+        change_mode = "restart"
+        data        = file("./templates-traefik.toml")
         destination = "local/traefik.toml"
       }
 

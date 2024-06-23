@@ -1,0 +1,20 @@
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    # Resolving Prometheus using Nomad's own features, without consul
+    url: http://{{ range service "prometheus" }}{{ .Address }}:{{ .Port }}{{ end }}/prometheus/
+    jsonData:
+      httpMethod: POST
+      manageAlerts: true
+
+  - name: Loki
+    type: loki
+    access: proxy
+    # Resolving Loki's IP via Consul, but dynamic port via Nomad
+    url: http://loki.service.consul:{{ range service "loki" }}{{ .Port }}{{ end }}
+    jsonData:
+      timeout: 60
+      maxLines: 100
