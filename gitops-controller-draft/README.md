@@ -111,4 +111,3 @@ ni3 <-->|Copy GitSource's repo to get desired state| g4
 
 - Significant room to reduce code repetition by creating some more generic functions for shared use between the different controllers
 - Integration tests against a local Nomad cluster should not be too difficult to set up
-
