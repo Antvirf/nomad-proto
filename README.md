@@ -107,3 +107,11 @@ prom --> |Pull metrics from Nomad|nomad
 end
 ```
 </details>
+
+## Useful reference docs
+
+- [Nomad variable interpolation](https://developer.hashicorp.com/nomad/docs/runtime/interpolation#interpreted_env_vars)
+- [Load balancing Nomad/Consul with Traefik](https://developer.hashicorp.com/nomad/tutorials/load-balancing/load-balancing-traefik)
+- [Nomad networking docs](https://developer.hashicorp.com/nomad/docs/networking)
+- [Nomad `network` block docs](https://developer.hashicorp.com/nomad/docs/job-specification/network#port-parameters)
+
