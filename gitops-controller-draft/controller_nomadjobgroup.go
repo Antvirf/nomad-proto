@@ -70,6 +70,15 @@ func ControllerNomadJobGroup(clientConfig *api.Config) {
 			}
 			logger.Info("successfully parsed Job specification", zap.String("fileName", job_spec_file.Name()))
 
+			// Add meta information to each Job
+			job_hcl.SetMeta("nomad_gitops_managed", "true")
+			job_hcl.SetMeta("nomad_gitops_current_commit", repo.Items.StatusCurrentCommit)
+			job_hcl.SetMeta("nomad_gitops_last_reconciliation_timestamp", time.Now().Format(time.RFC3339))
+			job_hcl.SetMeta("nomad_gitops_nomad_job_group", job.Path)
+			job_hcl.SetMeta("nomad_gitops_git_repository", repo.Path)
+			job_hcl.SetMeta("nomad_gitops_controller_name", controller_name)
+			job_hcl.SetMeta("nomad_gitops_controller_namespace", controller_namespace)
+
 			hcl_job_specs = append(hcl_job_specs, job_hcl)
 		}
 
