@@ -109,6 +109,7 @@ n2b <-->g4
 
 ## Misc notes
 
+- Need to figure out declarative creation of `GitRepository` objects also
 - Clean up the controller code overall, e.g. conversion functions from internal `NomadJobGroupObject` to `api.Variable` for usage with nomad should be accessible from each instance of `NomadJobGroupObject`.
 - Partial callables or custom logging structs are worth considering for both controllers, as we end up repeating ourselves a lot at the moment
 - Significant room to reduce code repetition by creating some more generic functions for shared use between the different controllers
