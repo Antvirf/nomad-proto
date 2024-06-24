@@ -9,13 +9,8 @@ import (
 	"go.uber.org/zap"
 )
 
-func ControllerGitRepository(clientConfig *api.Config) {
+func ControllerGitRepository(client *api.Client) {
 	logger.Info("starting controller: GitRepository")
-	//  Initialize Nomad Client
-	client, err := api.NewClient(clientConfig)
-	if err != nil {
-		logger.Error("failed to initialize Nomad client", zap.Error(err))
-	}
 
 	git_repositories := FetchGitRepositoriesForController(client)
 

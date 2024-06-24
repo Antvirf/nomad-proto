@@ -11,14 +11,8 @@ import (
 	"go.uber.org/zap"
 )
 
-func ControllerNomadJobGroup(clientConfig *api.Config) {
+func ControllerNomadJobGroup(client *api.Client) {
 	logger.Info("starting controller: NomadJobGroup")
-
-	//  Initialize Nomad Client
-	client, err := api.NewClient(clientConfig)
-	if err != nil {
-		logger.Error("failed to initialize Nomad client", zap.Error(err))
-	}
 
 	nomad_jobs := FetchNomadJobGroupsForController(client)
 	git_repositories := FetchGitRepositoriesForController(client)
@@ -60,7 +54,6 @@ func ControllerNomadJobGroup(clientConfig *api.Config) {
 			decodeDiags := gohcl.DecodeBody(variable_hcl.Body, nil, &nomadjobgroup_hcl)
 			if decodeDiags.HasErrors() {
 				logger.Error("failed to decode NomadJobGroup HCL file", zap.String("error", decodeDiags.Error()), zap.String("fileName", nomad_job_group_file_path.Name()))
-
 				continue // if we failed to decode its contents, skip this file.
 			}
 

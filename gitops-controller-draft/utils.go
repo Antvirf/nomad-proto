@@ -141,6 +141,15 @@ func FilterFilePathsFromGivenDirectoryAndRegex(directory string, regex string) (
 	return potential_files_to_apply, nil
 }
 
+func InitializeNomadApiClient(clientConfig *api.Config) *api.Client {
+	client, err := api.NewClient(clientConfig)
+	if err != nil {
+		logger.Error("failed to initialize Nomad client", zap.Error(err))
+		panic(err)
+	}
+	return client
+}
+
 // CopyFile and CopyDir from https://gist.github.com/r0l1/92462b38df26839a3ca324697c8cba04
 /* MIT License
  *

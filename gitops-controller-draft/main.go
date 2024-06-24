@@ -55,19 +55,19 @@ func init() {
 func main() {
 	// Set up Nomad ClientConfig for all controllers to use
 	// This uses the same env vars as the Nomad CLI, so set `env` block in the Nomad job spec accordingly
-	clientConfig := api.DefaultConfig()
+	client := InitializeNomadApiClient(api.DefaultConfig())
 
 	// Run the controllers - usually with cron, unless ONE_OFF is set
 
 	if strings.ToLower(ONE_OFF) == "true" {
-		ControllerGitRepository(clientConfig)
-		ControllerNomadJobGroup(clientConfig)
+		ControllerGitRepository(client)
+		ControllerNomadJobGroup(client)
 	} else {
 		c := cron.New(cron.WithSeconds())
 		c.AddFunc(SYNC_INTERVAL_CRON, func() {
 			logger.Info("starting reconciliation loop")
-			ControllerGitRepository(clientConfig)
-			ControllerNomadJobGroup(clientConfig)
+			ControllerGitRepository(client)
+			ControllerNomadJobGroup(client)
 		})
 		c.Start()
 		select {} // Keeps program running forever
