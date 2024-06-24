@@ -42,10 +42,10 @@ func ControllerGitRepository(client *api.Client) {
 			if err != nil {
 				logger.Error("failed to copy local directory", zap.Error(err))
 			}
-			continue // end this loop heref or this GitRepository instance.
+			continue // end this loop here for this GitRepository instance - for `local-directory` we are done.
 		}
 
-		logger.Info("cloning GitRepository from remote", zap.String("url", repo.Items.Url), zap.String("destination", base_path_plus_hash), zap.String("gitRepository", repo.Path))
+		// Handle cloning
 		repository, err := git.PlainClone(base_path_plus_hash, false, &git.CloneOptions{
 			URL:           repo.Items.Url,
 			Progress:      nil,
@@ -55,15 +55,15 @@ func ControllerGitRepository(client *api.Client) {
 
 		})
 		if err != nil {
-			logger.Error("failed to clone Git repository", zap.String("gitRepository", repo.Path), zap.Error(err))
-			continue
+			logger.Error("failed to clone Git repository", zap.String("gitRepository", repo.Path), zap.String("url", repo.Items.Url), zap.String("destination", base_path_plus_hash), zap.Error(err))
+			continue // If failed to clone, move on to the next repository.
 		}
 		current_revision, _ := repository.ResolveRevision(plumbing.Revision(string(repo.Items.Branch)))
 		logger.Info("successfully cloned Git Repository", zap.String("gitRepository", repo.Path), zap.String("commit", current_revision.String()))
 
 		// Update the Nomad variable with status current commit (last refresh/modify time is stored as part of the variable itself)
 		repo.OriginalVariable.Items["status_current_commit"] = current_revision.String()
-		repo.OriginalVariable, _, _ = client.Variables().Update(repo.OriginalVariable, &api.WriteOptions{})
+		repo.OriginalVariable, _, err = client.Variables().Update(repo.OriginalVariable, &api.WriteOptions{})
 		if err != nil {
 			logger.Error("failed to update `status_current_commit` field back to Nomad Variables for GitRepository", zap.String("gitRepository", repo.Path))
 		}
