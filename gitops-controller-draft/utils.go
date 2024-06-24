@@ -28,18 +28,29 @@ func GetEnv(key, defaultValue string) string {
 	}
 }
 
+func getMapStructureDecoder(result_interface interface{}) *mapstructure.Decoder {
+
+	decoder_config := mapstructure.DecoderConfig{
+		ErrorUnset:       true,  // omission of any keys in the Nomad var will cause error
+		ErrorUnused:      true,  // randomly added keys in Nomad vars will cause error
+		TagName:          "hcl", // Share the struct tag with HCL
+		WeaklyTypedInput: true,  // Every entry in Nomad variables is a string, this was set so we can collect `true`/`false` values from HCL booleans correctly
+		Result:           &result_interface,
+	}
+	decoder, err := mapstructure.NewDecoder(&decoder_config)
+	if err != nil {
+		panic(err) // this stuff doesn't change at runtime so would rather it explode during dev
+	}
+	return decoder
+}
+
 func ConvertVariableToNomadJobGroupStruct(variables []api.Variable) []NomadJobGroupObject {
 	nomad_job_objects := []NomadJobGroupObject{}
 
 	for _, variable := range variables {
 		nomad_job_object_items := NomadJobGroupObjectItems{}
-		decoder, _ := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
-			ErrorUnset:       true, // omission of any keys in the Nomad var will cause error
-			ErrorUnused:      true, // randomly added keys in Nomad vars will cause error
-			Result:           &nomad_job_object_items,
-			WeaklyTypedInput: true,
-			TagName:          "hcl", // Share the struct tag with HCL
-		})
+
+		decoder := getMapStructureDecoder(&nomad_job_object_items)
 		err := decoder.Decode(variable.Items)
 		if err != nil {
 			logger.Error("failed to decode variable's items block to expected format",
@@ -71,13 +82,8 @@ func ConvertVariableToGitRepositoryStruct(variables []api.Variable) []GitReposit
 		}
 
 		git_repository_object_items := GitRepositoryObjectItems{}
-		decoder, _ := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
-			ErrorUnset:       true, // omission of any keys in the Nomad var will cause error
-			ErrorUnused:      true, // randomly added keys in Nomad vars will cause error
-			Result:           &git_repository_object_items,
-			WeaklyTypedInput: true,
-			TagName:          "hcl", // Share the struct tag with HCL
-		})
+
+		decoder := getMapStructureDecoder(&git_repository_object_items)
 		err := decoder.Decode(variable.Items)
 		if err != nil {
 			logger.Error("failed to decode variable's items block to expected format",
@@ -108,8 +114,8 @@ func GetGitRepositoryForNomadJobGroup(job NomadJobGroupObject, repositories *[]G
 }
 
 func GetPathForRepository(repo GitRepositoryObject) string {
-	// Compute base64 hash of the GitRepository object Path (=name), so that we have no collisisions
-	// This might be needed if several sources target the same repository but e.g. different branch
+	// Compute base64 hash of the GitRepository object Path (=name), so that we have no collisions
+	// This might be needed if several sources target the same repository but e.g. different branch/revision
 	hashed_path_name := base64.RawURLEncoding.EncodeToString([]byte(repo.Path))
 	repo_name := path.Base(repo.Items.Url)
 	base_path_plus_hash := filepath.Join(controller_git_clone_base_path, hashed_path_name, repo_name)
