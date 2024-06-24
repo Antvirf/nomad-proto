@@ -1,6 +1,6 @@
 purgeTestVars:
 	nomad var purge nomadops/v1/gitrepository/testrepo
-	nomad var purge nomadops/v1/nomadjob/testjob
+	nomad var purge nomadops/v1/nomadjobgroup/testjob
 
 putvars:
 	nomad var put -force @test-jobspec.hcl

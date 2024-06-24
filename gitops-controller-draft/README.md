@@ -17,22 +17,24 @@ export NOMAD_GITOPS_ONE_OFF=true
 go run .
 
 # helpers to work with Nomad
-make putvars     # push initial manifests for a GitRepository and NomadJob
+make putvars     # push initial manifests for a GitRepository and NomadJobGroup
 make install     # compile the Go binary and make it accessible for local Nomad cluster
 make deploy      # run a job to deploy the controller to Nomad
 ```
 
 ## High-level structure and design drafting
 
-[Nomad Variables](https://developer.hashicorp.com/nomad/tutorials/variables/variables-create) allow storing "shared state" similar to how the storage of various objects works in Kubernetes. However, there is a size limit of `64KiB` ([ref](https://developer.hashicorp.com/nomad/api-docs/variables/variables)) on variables, though in my view this should be sufficient.
+[Nomad Variables](https://developer.hashicorp.com/nomad/tutorials/variables/variables-create) allow storing "shared state" similar to how the storage of various objects works in Kubernetes. However, there is a size limit of `64KiB` ([ref](https://developer.hashicorp.com/nomad/api-docs/variables/variables)) on variables, though in my view this should be sufficient. Status information of a specific Job can also be stored with the [`meta`](https://developer.hashicorp.com/nomad/docs/job-specification/meta) block.
 
 The primary "`CRDs`" are defined in [this file](./data_structures.go);
 
 - `GitRepository`, struct `GitRepositoryObject`
   - Responsible for storing information about the desired repositories (url, branch) to be fetched
-  - Also responsible for defining the relative path and file name filters to choose JobSpec files
-- `NomadJob`, struct `NomadJobObject`
-  - Responsible for storing information about a particular job in Nomad
+- `NomadJobGroup`, struct `NomadJobGroupObject`
+  - References a `GitRepository` by its Nomad Varibale path
+  - Responsible for defining the relative path and file name filters to choose Nomad Job specification files from a referenced repository
+  - Responsible for applying those Job specifications to the Nomad cluster
+  - Named this way as its options can result in the creation of any number of Jobs in Nomad (and it is up to Nomad itself to manage the `Job` objects as usual)
 
 The controllers are structured similarly, the below bullet points describe their *current* functionality:
 
@@ -40,70 +42,61 @@ The controllers are structured similarly, the below bullet points describe their
   - Fetch list of `GitRepository` objects from Nomad variable store
   - Clone each of these repositories to a configurable path
   - Update the `status_current_commit` field with the latest commit after cloning
-- [controller_nomadjob.go](./controller_nomadjob.go)
-  - Fetch list of `NomadJob` objects from Nomad variable store
-  - Fetch list of `GitRepository` objects from Nomad variable store
-  - Go though each job present in Nomad Variable store, referring to the now-present local clone of the relevant repository
+- [controller_nomadjobgroup.go](./controller_nomadjobgroup.go)
+  - Fetch list of `NomadJobGroup` objects from Nomad variable store
+  - Fetch list of `GitRepository` objects from Nomad variable store, figure out the right `GitRepository` for each `NomadJobGroup`
   - Find the job spec files defined in these repositories (using relative path and regex filters for file names)
-  - Register (=run) these jobs on Nomad
+  - Register (=run) these jobs on Nomad, adding relevant meteadata
 
-There is one critical step missing at the moment, which is to be able to **declaratively and automatically create** new NomadJob specs from the contents of each Git Repository. This could make sense as its own separate controller in the middle (~ `NomadJobIndex` controller or so), as a step that runs *after* `GitRepository` controller, but before `NomadJob` controller. This will need some further thought as having multiple operators touching the same object types (`NomadJob`s) introduces potential clashes/race conditions/other painful issues.  
+Both resource types would also benefit from additional `status` fields to provide more information about the current revision of each app, last update time, reasons for failure, if any, etc. Optimally I would like to see all the information necessary to debug behaviour just by looking at the `status_` fields of these objects - there should be no need to always look at the controller's logs. The state information of a "failed reconciliation" due to for example a malformed Job specification must be stored in one of these controller-managed Nomad Variables.
 
-Both resources would also benefit from additional `status` fields to provide more information about the current revision of each app, last update time, reasons for failure, if any, etc. Optimally I would like to see all the information necessary to debug behaviour just by looking at the `status_` fields of these objects - there should be no need to always look at the controller's logs.
+Finally, adding some type of webhook/API endpoint to trigger immediate reconciliation (or pause reconciliations temporarily) would also improve the operator experience significantly, along with commands for bootstrapping a cluster by initializing it with a `GitRepository` and a `NomadJobGroup`.
 
-Finally, adding some type of webhook/API endpoint to trigger immediate reconciliation (or pause reconciliations temporarily) would also improve the operator experience significantly
+What is currently missing is the ability to **declaratively** create `NomadJobGroup` objects from the contents of a repo. Flux handles this by having the `Kustomize` resource be *recursive*, in that there is usually a 'root' `Kustomization` pointing at a particular directory, which will then pick up any new `Kustomization` objects added within the subdirectories. `NomadJobGroup` could be expanded in a similar way, where, in its given source repo/path/filter, it deploys any `NomadJobGroup` objects it finds as Nomad Variables to the cluster. An additional filter parameter is probably worth adding here, as the filter expression for `NomadJobGroup` objects and regular Nomad Job specifications would likely need to be different. The `status_` fields present in `NomadJobGroup` would also need to be expanded with information about the origin of each variable (which `GitRepository` and `NomadJobGroup` sourced it, etc).
 
 ## Basic logic flow
 
-*This includes the third controller - `NomadJobIndex` Controller - that does not yet exist.*
+*This includes the planned expansion of the `NomadJobGroup` controller to also create new instances of `NomadJobGroup` objects*
 
 ```mermaid
 flowchart TD
 
-subgraph gits["Git Controller"]
+subgraph gits["GitRepository Controller"]
     g1a((Periodic sync))
     g1b((Webhook))
     g2[Deduce list of Git sources and their branches/commits]
-    g3[[For GitSource: Clone + checkout desired branch]]
-    g4[[For GitSource: Save state in filesystem]]
-    g5[[For GitSource: Update `status` field with last refresh]]
+    g3[[For GitRepository: Clone + checkout desired branch]]
+    g4[[For GitRepository: Save state in filesystem]]
+    g5[[For GitRepository: Update `status` field with last refresh]]
     g1a-->g2-->g3-->g4-->g5
     g1b-->g2
 end
 
-subgraph jbi["Nomad Job Index Controller"]
-    ni1a((Periodic sync))
-    ni1b((Webhook))
-    ni2[List all GitSource objects from Nomad Var store]
-    ni3[Parse all GitSource objects for NomadJobs]
-    ni4[Fetch all NomadJob objects from Nomad Var store]
-    ni5[["For combined list of NomadJob objects\n(Existing ones from VarStore + all from GitSource)"]]
-    nexists{{Exists?}}
-    nuptodate{{Up to date?}}
-    nfinish[[For NomadJob: update `jobIndexStatus` field with last refresh]]
-    nup["Update NomadJob (push to Nomad vars)"]
-    ncreate["Create NomadJob (push to Nomad vars)"]
-    
-    ni1a-->ni2
-    ni1b-->ni2-->ni3-->ni4-->ni5
-    nuptodate-->|yes|nfinish
-    ni5-->nexists-->|yes| nuptodate-->|no|nup-->nfinish
-    nexists-->|no|ncreate-->nfinish
-end
-
-subgraph jb["Nomad Job Controller"]
+subgraph jb["NomadJobGroup Controller"]
     n1a((Periodic sync))
     n1b((Webhook))
-    n2[List all NomadJobs objects from Nomad Var store]
-    n2b[[For NomadJob: copy current GitSource to a temp dir]]
-    n3[[For NomadJob: `nomad plan`]]
-    n3-->n5[[For NomadJob: `nomad run`]]
-    n5-->n6[[For NomadJob: update `status field` with last refresh info]]
-    n1a-->n2-->n2b-->n3
-    n1b-->n2
+    
+    %% Expansion to create instances of `NomadJobGroup` objects declaratively
+    subgraph njg["Subprocess to create NomadJobGroups from repo contents"]
+      njg1[[List files in given repo/path/filter]]
+      njg2[Parse files as Nomad Variables]
+      njg3[Push Nomad Variables to the store, adding metadata as `status_` fields]
+    end
+
+    subgraph njmain["Subprocess to create Jobs in Nomad based on each NomadJobGroup"]
+      n2[List all NomadJobGroups objects from Nomad Var store]
+      n2b[[For NomadJobGroup: refer to an existing/pre-cloned\nGitRepository from local filesystem]]
+      n3[[For NomadJobGroup: List files in given repo/path/filter to find Nomad Jobs]]
+      n3-->n5[[For each Job specification: Register the Job to Nomad]]
+      n5-->n7[[For each Job: update `meta` fields with last refresh info]]
+      n5-->n6[[For NomadJobGroup: update `status field` with last refresh info]]
+    end
+      n1a-->njg1
+      n1b-->njg1
+      n2b-->n3
+      njg1-->njg2-->njg3-->n2-->n2b
 end
-n2b <-->|Copy GitSource's repo to get desired state| g4
-ni3 <-->|Copy GitSource's repo to get desired state| g4
+n2b <-->g4
 
 ```
 

@@ -22,7 +22,7 @@ var (
 	controller_namespace = getEnv("NOMAD_GITOPS_CONTROLLER_NAMESPACE", "default")
 
 	// Internally configurable vars
-	NOMAD_VAR_NOMADJOB_PREFIX      = "nomadops/v1/nomadjob/"
+	NOMAD_VAR_NOMADJOB_PREFIX      = "nomadops/v1/nomadjobgroup/"
 	NOMAD_VAR_GITREPOSITORY_PREFIX = "nomadops/v1/gitrepository/"
 
 	// Derived internal vars
@@ -48,13 +48,13 @@ func main() {
 
 	if strings.ToLower(ONE_OFF) == "true" {
 		ControllerGitRepository(clientConfig)
-		ControllerNomadJob(clientConfig)
+		ControllerNomadJobGroup(clientConfig)
 	} else {
 		c := cron.New(cron.WithSeconds())
 		c.AddFunc(SYNC_INTERVAL_CRON, func() {
 			logger.Info("starting reconciliation loop")
 			ControllerGitRepository(clientConfig)
-			ControllerNomadJob(clientConfig)
+			ControllerNomadJobGroup(clientConfig)
 		})
 		c.Start()
 		select {} // Keeps program running forever

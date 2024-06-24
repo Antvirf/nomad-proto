@@ -4,14 +4,15 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"time"
 
 	"github.com/hashicorp/nomad/api"
 	"go.uber.org/zap"
 )
 
-func ControllerNomadJob(clientConfig *api.Config) {
+func ControllerNomadJobGroup(clientConfig *api.Config) {
 	logger = zap.L()
-	logger.Info("starting controller: NomadJob")
+	logger.Info("starting controller: NomadJobGroup")
 
 	//  Initialize Nomad Client
 	client, err := api.NewClient(clientConfig)
@@ -19,20 +20,20 @@ func ControllerNomadJob(clientConfig *api.Config) {
 		logger.Error("failed to initialize Nomad client", zap.Error(err))
 	}
 
-	nomad_jobs := FetchNomadJobsForController(client)
+	nomad_jobs := FetchNomadJobGroupsForController(client)
 	git_repositories := FetchGitRepositoriesForController(client)
 
 	// Main loop - get the repo for this job, find the file(s), apply the jobs
 	for _, job := range nomad_jobs {
-		repo, err := GetGitRepositoryForNomadJob(job, &git_repositories)
+		repo, err := GetGitRepositoryForNomadJobGroup(job, &git_repositories)
 		if err != nil {
-			logger.Error("failed to reconcile NomadJob due to missing repository",
+			logger.Error("failed to reconcile NomadJobGroup due to missing repository",
 				zap.Error(err),
 				zap.String("jobReferenceToGitRepository", job.Items.GitRepositoryName))
 		}
 
 		base_path_plus_hash := GetPathForRepository(repo)
-		repo_job_path := filepath.Join(base_path_plus_hash, repo.Items.RelativePath)
+		repo_job_path := filepath.Join(base_path_plus_hash, job.Items.RelativePath)
 		files_in_dir, err := os.ReadDir(
 			repo_job_path,
 		)
@@ -43,7 +44,7 @@ func ControllerNomadJob(clientConfig *api.Config) {
 		// Filter filepaths with given regex
 		potential_files_to_apply := []os.DirEntry{}
 		for _, file_path := range files_in_dir {
-			matches_path_filter, err := regexp.MatchString(repo.Items.RegexPathFilter, file_path.Name())
+			matches_path_filter, err := regexp.MatchString(job.Items.RegexPathFilter, file_path.Name())
 			if err != nil {
 				logger.Error("failed to regex match path filter to a filename",
 					zap.Error(err), zap.String("fileName", file_path.Name()),
@@ -68,6 +69,7 @@ func ControllerNomadJob(clientConfig *api.Config) {
 				continue
 			}
 			logger.Info("successfully parsed Job specification", zap.String("fileName", job_spec_file.Name()))
+
 			hcl_job_specs = append(hcl_job_specs, job_hcl)
 		}
 

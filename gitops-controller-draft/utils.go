@@ -24,12 +24,12 @@ func getEnv(key, defaultValue string) string {
 	return value
 }
 
-func ConvertVariableToNomadJobStruct(variables []api.Variable) []NomadJobObject {
+func ConvertVariableToNomadJobGroupStruct(variables []api.Variable) []NomadJobGroupObject {
 	logger := zap.L()
-	nomad_job_objects := []NomadJobObject{}
+	nomad_job_objects := []NomadJobGroupObject{}
 
 	for _, variable := range variables {
-		nomad_job_object_items := NomadJobObjectItems{}
+		nomad_job_object_items := NomadJobGroupObjectItems{}
 		decoder, _ := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
 			ErrorUnset:       true, // omission of any keys in the Nomad var will cause error
 			ErrorUnused:      true, // randomly added keys in Nomad vars will cause error
@@ -44,7 +44,7 @@ func ConvertVariableToNomadJobStruct(variables []api.Variable) []NomadJobObject 
 		}
 
 		// Convert the object's Items to a NomadObjectItems struct
-		nomad_job_objects = append(nomad_job_objects, NomadJobObject{
+		nomad_job_objects = append(nomad_job_objects, NomadJobGroupObject{
 			Namespace:        variable.Namespace,
 			Path:             variable.Path,
 			Items:            nomad_job_object_items,
@@ -94,13 +94,13 @@ func ConvertVariableToGitRepositoryStruct(variables []api.Variable) []GitReposit
 	return nomad_job_objects
 }
 
-func GetGitRepositoryForNomadJob(job NomadJobObject, repositories *[]GitRepositoryObject) (GitRepositoryObject, error) {
+func GetGitRepositoryForNomadJobGroup(job NomadJobGroupObject, repositories *[]GitRepositoryObject) (GitRepositoryObject, error) {
 	for _, repo := range *repositories {
 		if repo.Path == job.Items.GitRepositoryName {
 			return repo, nil
 		}
 	}
-	return GitRepositoryObject{}, errors.New("no GitRepo found for given NomadJob")
+	return GitRepositoryObject{}, errors.New("no GitRepo found for given NomadJobGroup")
 }
 
 func GetPathForRepository(repo GitRepositoryObject) string {
