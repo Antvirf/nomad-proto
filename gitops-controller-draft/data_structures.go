@@ -34,3 +34,20 @@ type NomadJobGroupObject struct {
 	Namespace        string                   `hcl:"namespace"`
 	Path             string                   `hcl:"path"`
 }
+
+func (nomad_job_group_object NomadJobGroupObject) ConvertToNomadVariable() *api.Variable {
+	return &api.Variable{
+		Path:      nomad_job_group_object.Path,
+		Namespace: nomad_job_group_object.Namespace,
+		Items: api.VariableItems{
+			"spec":                              nomad_job_group_object.Items.Spec,
+			"status":                            nomad_job_group_object.Items.Status,
+			"controller_name":                   nomad_job_group_object.Items.ControllerName,
+			"git_repository_name":               nomad_job_group_object.Items.GitRepositoryName,
+			"nomad_job_relative_path":           nomad_job_group_object.Items.NomadJobRelativePath,
+			"nomad_job_regex_path_filter":       nomad_job_group_object.Items.NomadJobRegexPathFilter,
+			"nomad_job_group_relative_path":     nomad_job_group_object.Items.NomadJobGroupRelativePath,
+			"nomad_job_group_regex_path_filter": nomad_job_group_object.Items.NomadJobGroupRegexPathFilter,
+		},
+	}
+}

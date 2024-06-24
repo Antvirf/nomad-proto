@@ -63,8 +63,8 @@ func ControllerNomadJobGroup(client *api.Client) {
 			}
 
 			// Parse internal HCL to something usable, decoding its contents to a NomadJobGroup object
-			var nomadjobgroup_hcl NomadJobGroupObject
-			decodeDiags := gohcl.DecodeBody(variable_hcl.Body, nil, &nomadjobgroup_hcl)
+			var nomad_job_group_object NomadJobGroupObject
+			decodeDiags := gohcl.DecodeBody(variable_hcl.Body, nil, &nomad_job_group_object)
 			if decodeDiags.HasErrors() {
 				logger.Error("failed to decode NomadJobGroup HCL file",
 					zap.String("fileName", nomad_job_group_file_path.Name()),
@@ -74,27 +74,14 @@ func ControllerNomadJobGroup(client *api.Client) {
 			}
 
 			// Push/update the job spec to Nomad Variables
-			_, _, err = client.Variables().Create(&api.Variable{
-				Path:      nomadjobgroup_hcl.Path,
-				Namespace: nomadjobgroup_hcl.Namespace,
-				Items: api.VariableItems{
-					"spec":                              nomadjobgroup_hcl.Items.Spec,
-					"status":                            nomadjobgroup_hcl.Items.Status,
-					"controller_name":                   nomadjobgroup_hcl.Items.ControllerName,
-					"git_repository_name":               nomadjobgroup_hcl.Items.GitRepositoryName,
-					"nomad_job_relative_path":           nomadjobgroup_hcl.Items.NomadJobRelativePath,
-					"nomad_job_regex_path_filter":       nomadjobgroup_hcl.Items.NomadJobRegexPathFilter,
-					"nomad_job_group_relative_path":     nomadjobgroup_hcl.Items.NomadJobGroupRelativePath,
-					"nomad_job_group_regex_path_filter": nomadjobgroup_hcl.Items.NomadJobGroupRegexPathFilter,
-				},
-			}, &api.WriteOptions{})
+			_, _, err = client.Variables().Create(nomad_job_group_object.ConvertToNomadVariable(), &api.WriteOptions{})
 			if err != nil {
 				logger.Error("failed to create NomadJobGroup variable",
 					zap.Error(err),
 				)
 			}
 			logger.Info("successfully created/updated NomadJobGroup variable",
-				zap.String("nomadJobGroup", nomadjobgroup_hcl.Path),
+				zap.String("nomadJobGroup", nomad_job_group_object.Path),
 			)
 		}
 	}
