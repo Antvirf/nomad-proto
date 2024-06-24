@@ -32,11 +32,13 @@ The primary "`CRDs`" are defined in [this file](./data_structures.go);
   - Responsible for storing information about the desired repositories (url, branch) to be fetched
 - `NomadJobGroup`, struct `NomadJobGroupObject`
   - References a `GitRepository` by its Nomad Varibale path
+  - Responsible for defining the relative path and file name filters to choose `NomadJobGroup` specification files from a referenced repository
+  - Responsible for creating new `NomadJobGroup` objects in the cluster after picking them up from the Git GitRepository
   - Responsible for defining the relative path and file name filters to choose Nomad Job specification files from a referenced repository
   - Responsible for applying those Job specifications to the Nomad cluster
   - Named this way as its options can result in the creation of any number of Jobs in Nomad (and it is up to Nomad itself to manage the `Job` objects as usual)
 
-The controllers are structured similarly, the below bullet points describe their *current* functionality:
+The controllers are structured similarly, the below bullet points describe their functionality:
 
 - [controller_gitrepository.go](./controller_gitrepository.go)
   - Fetch list of `GitRepository` objects from Nomad variable store
@@ -45,14 +47,19 @@ The controllers are structured similarly, the below bullet points describe their
 - [controller_nomadjobgroup.go](./controller_nomadjobgroup.go)
   - Fetch list of `NomadJobGroup` objects from Nomad variable store
   - Fetch list of `GitRepository` objects from Nomad variable store, figure out the right `GitRepository` for each `NomadJobGroup`
-  - Find the job spec files defined in these repositories (using relative path and regex filters for file names)
-  - Register (=run) these jobs on Nomad, adding relevant meteadata
+  - Controller loop #1: Create/update `NomadJobGroup` objects in relevant paths
+    - Find the `NomadJobGroup` files defined in these repositories (using relative path and regex filters for file names)
+    - Push them to Nomad as Variables for next reconciliation loop
+  - Controller loop #2: Create/update Nomad Jobs
+    - Find the job spec files defined in these repositories (using relative path and regex filters for file names)
+    - Register (=run) these jobs on Nomad, adding relevant meteadata
+  - Controller loop #3: (planned) Prune deleted Jobs
+    - Based on jobs that exist on the cluster, are managed by the controller (as evidenced by their `meta` block data), but no longer exist in Nomad Variables, should be purged
+    - Actual behaviour (whether to delete vs. just log the discrepancy) to be set based on a flag from `NomadJobGroup` (perhaps `purge(bool)`), that is then saved in the `meta` of each job created by that `NomadJobGroup`
 
 Both resource types would also benefit from additional `status` fields to provide more information about the current revision of each app, last update time, reasons for failure, if any, etc. Optimally I would like to see all the information necessary to debug behaviour just by looking at the `status_` fields of these objects - there should be no need to always look at the controller's logs. The state information of a "failed reconciliation" due to for example a malformed Job specification must be stored in one of these controller-managed Nomad Variables.
 
 Finally, adding some type of webhook/API endpoint to trigger immediate reconciliation (or pause reconciliations temporarily) would also improve the operator experience significantly, along with commands for bootstrapping a cluster by initializing it with a `GitRepository` and a `NomadJobGroup`.
-
-What is currently missing is the ability to **declaratively** create `NomadJobGroup` objects from the contents of a repo. Flux handles this by having the `Kustomize` resource be *recursive*, in that there is usually a 'root' `Kustomization` pointing at a particular directory, which will then pick up any new `Kustomization` objects added within the subdirectories. `NomadJobGroup` could be expanded in a similar way, where, in its given source repo/path/filter, it deploys any `NomadJobGroup` objects it finds as Nomad Variables to the cluster. An additional filter parameter is probably worth adding here, as the filter expression for `NomadJobGroup` objects and regular Nomad Job specifications would likely need to be different. The `status_` fields present in `NomadJobGroup` would also need to be expanded with information about the origin of each variable (which `GitRepository` and `NomadJobGroup` sourced it, etc).
 
 ## Basic logic flow
 
@@ -102,5 +109,8 @@ n2b <-->g4
 
 ## Misc notes
 
+- Clean up the controller code overall, e.g. conversion functions from internal `NomadJobGroupObject` to `api.Variable` for usage with nomad should be accessible from each instance of `NomadJobGroupObject`.
+- Partial callables or custom logging structs are worth considering for both controllers, as we end up repeating ourselves a lot at the moment
 - Significant room to reduce code repetition by creating some more generic functions for shared use between the different controllers
 - Integration tests against a local Nomad cluster should not be too difficult to set up
+

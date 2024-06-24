@@ -76,7 +76,7 @@ func FetchNomadJobGroupsForController(client *api.Client) []NomadJobGroupObject 
 	}
 
 	logger.Info("NomadJobGroup filtering complete",
-		zap.Int("nomadJobsToProcess", len(nomad_job_objects_relevant_for_controller)),
+		zap.Int("nomadJobGroupsToProcess", len(nomad_job_objects_relevant_for_controller)),
 	)
 	return nomad_job_objects_relevant_for_controller
 }

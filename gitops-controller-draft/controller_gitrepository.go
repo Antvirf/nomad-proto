@@ -25,7 +25,7 @@ func ControllerGitRepository(clientConfig *api.Config) {
 
 		base_path_plus_hash := GetPathForRepository(repo)
 
-		// Check if the directory exists already, if yes - fetch instead of clone
+		// Check if the directory exists already, if yes - clean it up
 		if _, err := os.Stat(base_path_plus_hash); !os.IsNotExist(err) {
 			err = os.RemoveAll(base_path_plus_hash)
 			if err != nil {
@@ -40,6 +40,18 @@ func ControllerGitRepository(clientConfig *api.Config) {
 			continue
 		}
 
+		// If type of repo is local-directory, we just clone that local dir using the `url` to the right place
+		if repo.Items.Type == "local-directory" {
+			logger.Info("copying GitRepository from a 'local-directory'", zap.String("localPath", repo.Items.Url), zap.String("destination", base_path_plus_hash), zap.String("gitRepository", repo.Path))
+			os.Remove(base_path_plus_hash)
+			err := CopyDir(repo.Items.Url, base_path_plus_hash)
+			if err != nil {
+				logger.Error("failed to copy local directory", zap.Error(err))
+			}
+			continue // end this loop heref or this GitRepository instance.
+		}
+
+		logger.Info("cloning GitRepository from remote", zap.String("url", repo.Items.Url), zap.String("destination", base_path_plus_hash), zap.String("gitRepository", repo.Path))
 		repository, err := git.PlainClone(base_path_plus_hash, false, &git.CloneOptions{
 			URL:           repo.Items.Url,
 			Progress:      nil,
