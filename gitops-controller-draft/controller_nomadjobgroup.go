@@ -12,7 +12,6 @@ import (
 )
 
 func ControllerNomadJobGroup(clientConfig *api.Config) {
-	logger = zap.L()
 	logger.Info("starting controller: NomadJobGroup")
 
 	//  Initialize Nomad Client

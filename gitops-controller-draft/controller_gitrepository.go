@@ -11,7 +11,6 @@ import (
 
 func ControllerGitRepository(clientConfig *api.Config) {
 	logger.Info("starting controller: GitRepository")
-	logger = zap.L()
 	//  Initialize Nomad Client
 	client, err := api.NewClient(clientConfig)
 	if err != nil {

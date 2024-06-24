@@ -82,7 +82,6 @@ func FetchNomadJobGroupsForController(client *api.Client) []NomadJobGroupObject 
 }
 
 func FetchGitRepositoriesForController(client *api.Client) []GitRepositoryObject {
-	logger = zap.L()
 	variablemetadata, _, err := client.Variables().List(&api.QueryOptions{
 		Prefix: NOMAD_VAR_GITREPOSITORY_PREFIX,
 	})
@@ -101,8 +100,6 @@ func FetchGitRepositoriesForController(client *api.Client) []GitRepositoryObject
 	nomad_gitrepo_objects := ConvertVariableToGitRepositoryStruct(variables)
 
 	// Filter out all jobspecs to check based on controllername
-	controller_name := getEnv("NOMAD_GITOPS_CONTROLLER_NAME", "nomadops")
-	controller_namespace := getEnv("NOMAD_GITOPS_CONTROLLER_NAMESPACE", "default")
 	logger.Info("filtering GitRepositories for controller relevance",
 		zap.String("controllerNamespace", controller_namespace),
 		zap.String("controllerName", controller_name))

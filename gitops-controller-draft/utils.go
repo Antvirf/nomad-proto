@@ -16,19 +16,19 @@ import (
 	"go.uber.org/zap"
 )
 
-func getEnv(key, defaultValue string) string {
-	logger = zap.L()
+func GetEnv(key, defaultValue string) string {
 	value := os.Getenv(key)
+	logger = zap.L()
 	if len(value) == 0 {
-		fmt.Println("config: setting configurable variable from its default:", key, "=", defaultValue)
+		logger.Info(fmt.Sprintf("config: setting configurable variable from its default: %s=%s", key, defaultValue))
 		return defaultValue
+	} else {
+		logger.Info(fmt.Sprintf("config: setting configurable variable from environment: %s=%s", key, value))
+		return value
 	}
-	fmt.Println("config: setting configurable variable from environment", key, "=", value)
-	return value
 }
 
 func ConvertVariableToNomadJobGroupStruct(variables []api.Variable) []NomadJobGroupObject {
-	logger := zap.L()
 	nomad_job_objects := []NomadJobGroupObject{}
 
 	for _, variable := range variables {
@@ -62,7 +62,6 @@ func ConvertVariableToNomadJobGroupStruct(variables []api.Variable) []NomadJobGr
 
 func ConvertVariableToGitRepositoryStruct(variables []api.Variable) []GitRepositoryObject {
 	nomad_job_objects := []GitRepositoryObject{}
-	logger := zap.L()
 
 	for _, variable := range variables {
 
@@ -118,7 +117,6 @@ func GetPathForRepository(repo GitRepositoryObject) string {
 }
 
 func FilterFilePathsFromGivenDirectoryAndRegex(directory string, regex string) ([]os.DirEntry, error) {
-	logger := zap.L()
 	potential_files_to_apply := []os.DirEntry{}
 	files_in_dir, err := os.ReadDir(
 		directory,
