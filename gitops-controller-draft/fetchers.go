@@ -57,7 +57,8 @@ func FetchNomadJobGroupsForController(client *api.Client) []NomadJobGroupObject 
 	// Filter out all jobspecs to check based on controllername
 	logger.Info("filtering NomadJobGroups for controller relevance",
 		zap.String("controllerNamespace", controller_namespace),
-		zap.String("controllerName", controller_name))
+		zap.String("controllerName", controller_name),
+	)
 
 	nomad_job_objects_relevant_for_controller := []NomadJobGroupObject{}
 
@@ -65,13 +66,15 @@ func FetchNomadJobGroupsForController(client *api.Client) []NomadJobGroupObject 
 		if (object.Items.ControllerName == controller_name) && (object.Namespace == controller_namespace) {
 			logger.Info("accepting NomadJobGroup as it matches controller name and/or namespace",
 				zap.String("variablePath", object.Path),
-				zap.String("variableNamespace", object.Namespace))
+				zap.String("variableNamespace", object.Namespace),
+			)
 			nomad_job_objects_relevant_for_controller = append(nomad_job_objects_relevant_for_controller, object)
 		} else {
 			logger.Warn(
 				"skipping NomadJobGroup as it does not match given controller name and/or namespace",
 				zap.String("variablePath", object.Path),
-				zap.String("variableNamespace", object.Namespace))
+				zap.String("variableNamespace", object.Namespace),
+			)
 		}
 	}
 
@@ -102,7 +105,8 @@ func FetchGitRepositoriesForController(client *api.Client) []GitRepositoryObject
 	// Filter out all jobspecs to check based on controllername
 	logger.Info("filtering GitRepositories for controller relevance",
 		zap.String("controllerNamespace", controller_namespace),
-		zap.String("controllerName", controller_name))
+		zap.String("controllerName", controller_name),
+	)
 
 	gitrepository_objects_relevant_for_controller := []GitRepositoryObject{}
 
@@ -110,13 +114,15 @@ func FetchGitRepositoriesForController(client *api.Client) []GitRepositoryObject
 		if (object.Items.ControllerName == controller_name) && (object.Namespace == controller_namespace) {
 			logger.Info("accepting GitRepository as it matches controller name and/or namespace",
 				zap.String("variablePath", object.Path),
-				zap.String("variableNamespace", object.Namespace))
+				zap.String("variableNamespace", object.Namespace),
+			)
 			gitrepository_objects_relevant_for_controller = append(gitrepository_objects_relevant_for_controller, object)
 		} else {
 			logger.Warn(
 				"skipping GitRepository as it does not match given controller name and/or namespace",
 				zap.String("variablePath", object.Path),
-				zap.String("variableNamespace", object.Namespace))
+				zap.String("variableNamespace", object.Namespace),
+			)
 		}
 	}
 

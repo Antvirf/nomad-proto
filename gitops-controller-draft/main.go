@@ -47,7 +47,9 @@ func init() {
 	// Set up controller working directory
 	err := os.MkdirAll(controller_git_clone_base_path, os.ModePerm)
 	if err != nil {
-		logger.Fatal("failed to create controller base path", zap.Error(err))
+		logger.Fatal("failed to create controller base path",
+			zap.Error(err),
+		)
 		panic(err)
 	}
 }
@@ -58,7 +60,6 @@ func main() {
 	client := InitializeNomadApiClient(api.DefaultConfig())
 
 	// Run the controllers - usually with cron, unless ONE_OFF is set
-
 	if strings.ToLower(ONE_OFF) == "true" {
 		ControllerGitRepository(client)
 		ControllerNomadJobGroup(client)

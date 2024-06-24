@@ -130,11 +130,16 @@ func FilterFilePathsFromGivenDirectoryAndRegex(directory string, regex string) (
 		matches_path_filter, err := regexp.MatchString(regex, file_path.Name())
 		if err != nil {
 			logger.Error("regex error when matching path filter to a filename",
-				zap.Error(err), zap.String("fileName", file_path.Name()),
+				zap.String("fileName", file_path.Name()),
+				zap.Error(err),
 			)
 		}
 		if matches_path_filter {
-			logger.Debug("file found matching filter", zap.String("directory", directory), zap.String("regex", regex), zap.String("fileName", file_path.Name()))
+			logger.Debug("file found matching filter",
+				zap.String("directory", directory),
+				zap.String("regex", regex),
+				zap.String("fileName", file_path.Name()),
+			)
 			potential_files_to_apply = append(potential_files_to_apply, file_path)
 		}
 	}
@@ -144,7 +149,9 @@ func FilterFilePathsFromGivenDirectoryAndRegex(directory string, regex string) (
 func InitializeNomadApiClient(clientConfig *api.Config) *api.Client {
 	client, err := api.NewClient(clientConfig)
 	if err != nil {
-		logger.Error("failed to initialize Nomad client", zap.Error(err))
+		logger.Error("failed to initialize Nomad client",
+			zap.Error(err),
+		)
 		panic(err)
 	}
 	return client
