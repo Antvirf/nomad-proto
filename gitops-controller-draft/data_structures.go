@@ -23,7 +23,6 @@ type NomadJobGroupObjectItems struct {
 	GitRepositoryName string `mapstructure:"git_repository_name"`
 	RelativePath      string `mapstructure:"relative_path"`
 	RegexPathFilter   string `mapstructure:"regex_path_filter"`
-	Recurse           bool   `mapstructure:"recurse"`
 }
 
 type NomadJobGroupObject struct {
