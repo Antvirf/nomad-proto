@@ -2,6 +2,8 @@ package main
 
 import "github.com/hashicorp/nomad/api"
 
+// Structs
+
 type GitRepositoryObjectItems struct {
 	ControllerName      string `hcl:"controller_name"`
 	Url                 string `hcl:"url"`
@@ -34,6 +36,23 @@ type NomadJobGroupObject struct {
 	Namespace        string                   `hcl:"namespace"`
 	Path             string                   `hcl:"path"`
 }
+
+// Interfaces
+
+type ControllerObject interface {
+	GetPath() string
+	GetNamespace() string
+	GetControllerName() string
+}
+
+// Functions
+
+func (obj NomadJobGroupObject) GetPath() string           { return obj.Path }
+func (obj GitRepositoryObject) GetPath() string           { return obj.Path }
+func (obj NomadJobGroupObject) GetNamespace() string      { return obj.Namespace }
+func (obj GitRepositoryObject) GetNamespace() string      { return obj.Namespace }
+func (obj NomadJobGroupObject) GetControllerName() string { return obj.Items.ControllerName }
+func (obj GitRepositoryObject) GetControllerName() string { return obj.Items.ControllerName }
 
 func (nomad_job_group_object NomadJobGroupObject) ConvertToNomadVariable() *api.Variable {
 	return &api.Variable{

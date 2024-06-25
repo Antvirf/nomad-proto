@@ -32,6 +32,7 @@ func init() {
 	zap_encoder_config.EncodeTime = zapcore.ISO8601TimeEncoder
 	zap_config := zap.NewProductionConfig()
 	zap_config.DisableCaller = true
+	zap_config.Level = zap.NewAtomicLevelAt(zapcore.DebugLevel)
 	zap_config.EncoderConfig = zap_encoder_config
 	zap.ReplaceGlobals(zap.Must(zap_config.Build()))
 

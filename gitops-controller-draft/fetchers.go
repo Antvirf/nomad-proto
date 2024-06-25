@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/hashicorp/nomad/api"
@@ -8,7 +9,6 @@ import (
 )
 
 func ExpandVariables(client *api.Client, variablemetadata []*api.VariableMetadata) (variables []api.Variable) {
-	logger = zap.L()
 	for _, v := range variablemetadata {
 		variable_items, _, err := client.Variables().GetVariableItems(v.Path, &api.QueryOptions{})
 		if err != nil {
@@ -34,8 +34,7 @@ func ExpandVariables(client *api.Client, variablemetadata []*api.VariableMetadat
 	return
 }
 
-func FetchNomadJobGroupsForController(client *api.Client) []NomadJobGroupObject {
-	logger = zap.L()
+func FetchNomadJobGroupsForController(client *api.Client) (controller_relevant_nomad_job_objects []NomadJobGroupObject) {
 	variablemetadata, _, err := client.Variables().List(&api.QueryOptions{
 		Prefix: NOMAD_VAR_NOMADJOB_PREFIX,
 	})
@@ -43,47 +42,17 @@ func FetchNomadJobGroupsForController(client *api.Client) []NomadJobGroupObject 
 		logger.Error("failed to fetch variablemetadata from Nomad",
 			zap.Error(err),
 		)
-		os.Exit(1)
+		panic(err)
 	}
 	logger.Info("successfully fetched variables list from Nomad for NomadJobGroups")
 
-	// Epxand variable metadata so that we have the content (`Items`) within each object
 	variables := ExpandVariables(client, variablemetadata)
-
-	// Convert api.Variables to NomadJobGroupObjects for further processing
 	nomad_job_objects := ConvertVariableToNomadJobGroupStruct(variables)
-
-	// Filter out all jobspecs to check based on controllername
-	logger.Info("filtering NomadJobGroups for controller relevance",
-		zap.String("controllerNamespace", controller_namespace),
-		zap.String("controllerName", controller_name),
-	)
-
-	nomad_job_objects_relevant_for_controller := []NomadJobGroupObject{}
-
-	for _, object := range nomad_job_objects {
-		if (object.Items.ControllerName == controller_name) && (object.Namespace == controller_namespace) {
-			logger.Info("accepting NomadJobGroup as it matches controller name and/or namespace",
-				zap.String("variablePath", object.Path),
-				zap.String("variableNamespace", object.Namespace),
-			)
-			nomad_job_objects_relevant_for_controller = append(nomad_job_objects_relevant_for_controller, object)
-		} else {
-			logger.Warn(
-				"skipping NomadJobGroup as it does not match given controller name and/or namespace",
-				zap.String("variablePath", object.Path),
-				zap.String("variableNamespace", object.Namespace),
-			)
-		}
-	}
-
-	logger.Info("NomadJobGroup filtering complete",
-		zap.Int("nomadJobGroupsToProcess", len(nomad_job_objects_relevant_for_controller)),
-	)
-	return nomad_job_objects_relevant_for_controller
+	controller_relevant_nomad_job_objects = FilterObjectForController(nomad_job_objects)
+	return
 }
 
-func FetchGitRepositoriesForController(client *api.Client) []GitRepositoryObject {
+func FetchGitRepositoriesForController(client *api.Client) (controller_relevant_gitrepo_objects []GitRepositoryObject) {
 	variablemetadata, _, err := client.Variables().List(&api.QueryOptions{
 		Prefix: NOMAD_VAR_GITREPOSITORY_PREFIX,
 	})
@@ -91,42 +60,45 @@ func FetchGitRepositoriesForController(client *api.Client) []GitRepositoryObject
 		logger.Error("failed to fetch variablemetadata from Nomad",
 			zap.Error(err),
 		)
-		os.Exit(1)
+		panic(err)
 	}
 	logger.Info("successfully fetched variables list from Nomad for GitRepositories")
 
-	// Epxand variable metadata so that we have the content (`Items`) within each object
 	variables := ExpandVariables(client, variablemetadata)
-
-	// Convert api.Variables to NomadJobGroupObjects for further processing
 	nomad_gitrepo_objects := ConvertVariableToGitRepositoryStruct(variables)
+	controller_relevant_gitrepo_objects = FilterObjectForController(nomad_gitrepo_objects)
+	return
+}
 
-	// Filter out all jobspecs to check based on controllername
-	logger.Info("filtering GitRepositories for controller relevance",
+func FilterObjectForController[T ControllerObject](objects []T) (filtered_objects []T) {
+	if len(objects) == 0 {
+		return
+	} // do not process an empty list further
+
+	object_type := GetObjectNameFromVariablePath(objects[0].GetPath())
+
+	logger.Debug(fmt.Sprintf("filtering %s for controller relevance", object_type),
 		zap.String("controllerNamespace", controller_namespace),
 		zap.String("controllerName", controller_name),
 	)
 
-	gitrepository_objects_relevant_for_controller := []GitRepositoryObject{}
-
-	for _, object := range nomad_gitrepo_objects {
-		if (object.Items.ControllerName == controller_name) && (object.Namespace == controller_namespace) {
-			logger.Info("accepting GitRepository as it matches controller name and/or namespace",
-				zap.String("variablePath", object.Path),
-				zap.String("variableNamespace", object.Namespace),
+	for _, object := range objects {
+		if (object.GetControllerName() == controller_name) && (object.GetNamespace() == controller_namespace) {
+			logger.Info(fmt.Sprintf("accepting %s as it matches controller name and/or namespace", object_type),
+				zap.String("variablePath", object.GetPath()),
+				zap.String("variableNamespace", object.GetNamespace()),
 			)
-			gitrepository_objects_relevant_for_controller = append(gitrepository_objects_relevant_for_controller, object)
+			filtered_objects = append(filtered_objects, object)
 		} else {
 			logger.Warn(
-				"skipping GitRepository as it does not match given controller name and/or namespace",
-				zap.String("variablePath", object.Path),
-				zap.String("variableNamespace", object.Namespace),
+				fmt.Sprintf("skipping %s as it does not match given controller name and/or namespace", object_type),
+				zap.String("variablePath", object.GetPath()),
+				zap.String("variableNamespace", object.GetNamespace()),
 			)
 		}
 	}
-
-	logger.Info("GitRepository filtering complete",
-		zap.Int("gitRepositories", len(gitrepository_objects_relevant_for_controller)),
+	logger.Info(fmt.Sprintf("%s filtering complete", object_type),
+		zap.Int(fmt.Sprintf("%sToProcess", object_type), len(filtered_objects)),
 	)
-	return gitrepository_objects_relevant_for_controller
+	return
 }

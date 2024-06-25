@@ -28,6 +28,10 @@ func GetEnv(key, defaultValue string) string {
 	}
 }
 
+func GetObjectNameFromVariablePath(path string) string {
+	return regexp.MustCompile(`/v1/([^/]+)`).FindStringSubmatch(path)[1]
+}
+
 func getMapStructureDecoder(result_interface interface{}) *mapstructure.Decoder {
 
 	decoder_config := mapstructure.DecoderConfig{
