@@ -7,9 +7,8 @@ import (
 	"go.uber.org/zap"
 )
 
-func ExpandVariables(client *api.Client, variablemetadata []*api.VariableMetadata) []api.Variable {
+func ExpandVariables(client *api.Client, variablemetadata []*api.VariableMetadata) (variables []api.Variable) {
 	logger = zap.L()
-	var variables []api.Variable
 	for _, v := range variablemetadata {
 		variable_items, _, err := client.Variables().GetVariableItems(v.Path, &api.QueryOptions{})
 		if err != nil {
@@ -32,7 +31,7 @@ func ExpandVariables(client *api.Client, variablemetadata []*api.VariableMetadat
 		}
 		variables = append(variables, variable)
 	}
-	return variables
+	return
 }
 
 func FetchNomadJobGroupsForController(client *api.Client) []NomadJobGroupObject {

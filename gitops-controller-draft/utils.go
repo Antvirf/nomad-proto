@@ -44,9 +44,7 @@ func getMapStructureDecoder(result_interface interface{}) *mapstructure.Decoder 
 	return decoder
 }
 
-func ConvertVariableToNomadJobGroupStruct(variables []api.Variable) []NomadJobGroupObject {
-	nomad_job_objects := []NomadJobGroupObject{}
-
+func ConvertVariableToNomadJobGroupStruct(variables []api.Variable) (nomad_job_objects []NomadJobGroupObject) {
 	for _, variable := range variables {
 		nomad_job_object_items := NomadJobGroupObjectItems{}
 
@@ -67,13 +65,10 @@ func ConvertVariableToNomadJobGroupStruct(variables []api.Variable) []NomadJobGr
 		},
 		)
 	}
-
-	return nomad_job_objects
+	return
 }
 
-func ConvertVariableToGitRepositoryStruct(variables []api.Variable) []GitRepositoryObject {
-	nomad_job_objects := []GitRepositoryObject{}
-
+func ConvertVariableToGitRepositoryStruct(variables []api.Variable) (git_repository_objects []GitRepositoryObject) {
 	for _, variable := range variables {
 
 		// PATCHERS: Add empty values for status_ fields if not set in items currently
@@ -92,7 +87,7 @@ func ConvertVariableToGitRepositoryStruct(variables []api.Variable) []GitReposit
 		}
 
 		// Convert the object's Items to a NomadObjectItems struct
-		nomad_job_objects = append(nomad_job_objects, GitRepositoryObject{
+		git_repository_objects = append(git_repository_objects, GitRepositoryObject{
 			Namespace:        variable.Namespace,
 			Path:             variable.Path,
 			Items:            git_repository_object_items,
@@ -100,8 +95,7 @@ func ConvertVariableToGitRepositoryStruct(variables []api.Variable) []GitReposit
 		},
 		)
 	}
-
-	return nomad_job_objects
+	return
 }
 
 func GetGitRepositoryForNomadJobGroup(job NomadJobGroupObject, repositories *[]GitRepositoryObject) (GitRepositoryObject, error) {
@@ -113,22 +107,21 @@ func GetGitRepositoryForNomadJobGroup(job NomadJobGroupObject, repositories *[]G
 	return GitRepositoryObject{}, errors.New("no GitRepo found for given NomadJobGroup")
 }
 
-func GetPathForRepository(repo GitRepositoryObject) string {
+func GetPathForRepository(repo GitRepositoryObject) (base_path_plus_hash string) {
 	// Compute base64 hash of the GitRepository object Path (=name), so that we have no collisions
 	// This might be needed if several sources target the same repository but e.g. different branch/revision
 	hashed_path_name := base64.RawURLEncoding.EncodeToString([]byte(repo.Path))
 	repo_name := path.Base(repo.Items.Url)
-	base_path_plus_hash := filepath.Join(controller_git_clone_base_path, hashed_path_name, repo_name)
-	return base_path_plus_hash
+	base_path_plus_hash = filepath.Join(controller_git_clone_base_path, hashed_path_name, repo_name)
+	return
 }
 
-func FilterFilePathsFromGivenDirectoryAndRegex(directory string, regex string) ([]os.DirEntry, error) {
-	potential_files_to_apply := []os.DirEntry{}
+func FilterFilePathsFromGivenDirectoryAndRegex(directory string, regex string) (filtered_file_paths []os.DirEntry, err error) {
 	files_in_dir, err := os.ReadDir(
 		directory,
 	)
 	if (err != nil) || len(files_in_dir) == 0 {
-		return potential_files_to_apply, errors.New("directory is inaccessible or empty")
+		return filtered_file_paths, errors.New("directory is inaccessible or empty")
 	}
 
 	// Filter filepaths with given regex
@@ -146,13 +139,13 @@ func FilterFilePathsFromGivenDirectoryAndRegex(directory string, regex string) (
 				zap.String("regex", regex),
 				zap.String("fileName", file_path.Name()),
 			)
-			potential_files_to_apply = append(potential_files_to_apply, file_path)
+			filtered_file_paths = append(filtered_file_paths, file_path)
 		}
 	}
-	return potential_files_to_apply, nil
+	return
 }
 
-func InitializeNomadApiClient(clientConfig *api.Config) *api.Client {
+func InitializeNomadApiClient(clientConfig *api.Config) (client *api.Client) {
 	client, err := api.NewClient(clientConfig)
 	if err != nil {
 		logger.Error("failed to initialize Nomad client",
@@ -160,7 +153,7 @@ func InitializeNomadApiClient(clientConfig *api.Config) *api.Client {
 		)
 		panic(err)
 	}
-	return client
+	return
 }
 
 // CopyFile and CopyDir from https://gist.github.com/r0l1/92462b38df26839a3ca324697c8cba04
