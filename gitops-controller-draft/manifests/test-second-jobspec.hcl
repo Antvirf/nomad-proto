@@ -10,7 +10,7 @@ items {
   nomad_job_regex_path_filter = "job-.*.nomad.hcl"
 
   // Where to find .hcl files that describe NomadJobGroups
-  nomad_job_group_relative_path     = "gitops-controller-draft"
+  nomad_job_group_relative_path     = "gitops-controller-draft/manifests"
   nomad_job_group_regex_path_filter = ".*.-jobspec.hcl"
 
   spec   = "something" // WIP

@@ -8,13 +8,13 @@ I thought this was worth doing, since though there are some implementations for 
 
 ```bash
 # install go deps
-go get .
+go mod download
 
 # to run the controller's primary loops just once, set the ONE_OFF flag as follows
 export NOMAD_GITOPS_ONE_OFF=true
 
 # start the controller
-go run .
+go run ./pkgs
 
 # helpers to work with Nomad
 make putvars     # push initial manifests for a GitRepository and NomadJobGroup
@@ -26,7 +26,7 @@ make deploy      # run a job to deploy the controller to Nomad
 
 [Nomad Variables](https://developer.hashicorp.com/nomad/tutorials/variables/variables-create) allow storing "shared state" similar to how the storage of various objects works in Kubernetes. However, there is a size limit of `64KiB` ([ref](https://developer.hashicorp.com/nomad/api-docs/variables/variables)) on variables, though in my view this should be sufficient. Status information of a specific Job can also be stored with the [`meta`](https://developer.hashicorp.com/nomad/docs/job-specification/meta) block.
 
-The primary "`CRDs`" are defined in [this file](./data_structures.go);
+The primary "`CRDs`" are defined in [this file](./nomad-gitops-operator/data_structures.go);
 
 - `GitRepository`, struct `GitRepositoryObject`
   - Responsible for storing information about the desired repositories (url, branch) to be fetched
@@ -40,11 +40,11 @@ The primary "`CRDs`" are defined in [this file](./data_structures.go);
 
 The controllers are structured similarly, the below bullet points describe their functionality:
 
-- [controller_gitrepository.go](./controller_gitrepository.go)
+- [controller_gitrepository.go](./nomad-gitops-operator/controller_gitrepository.go)
   - Fetch list of `GitRepository` objects from Nomad variable store
   - Clone each of these repositories to a configurable path
   - Update the `status_current_commit` field with the latest commit after cloning
-- [controller_nomadjobgroup.go](./controller_nomadjobgroup.go)
+- [controller_nomadjobgroup.go](./nomad-gitops-operator/controller_nomadjobgroup.go)
   - Fetch list of `NomadJobGroup` objects from Nomad variable store
   - Fetch list of `GitRepository` objects from Nomad variable store, figure out the right `GitRepository` for each `NomadJobGroup`
   - Controller loop #1: Create/update `NomadJobGroup` objects in relevant paths
@@ -52,7 +52,7 @@ The controllers are structured similarly, the below bullet points describe their
     - Push them to Nomad as Variables for next reconciliation loop
   - Controller loop #2: Create/update Nomad Jobs
     - Find the job spec files defined in these repositories (using relative path and regex filters for file names)
-    - Register (=run) these jobs on Nomad, adding relevant meteadata
+    - Register (=run) these jobs on Nomad, adding relevant metadata
   - Controller loop #3: (planned) Prune deleted Jobs
     - Based on jobs that exist on the cluster, are managed by the controller (as evidenced by their `meta` block data), but no longer exist in Nomad Variables, should be purged
     - Actual behaviour (whether to delete vs. just log the discrepancy) to be set based on a flag from `NomadJobGroup` (perhaps `purge(bool)`), that is then saved in the `meta` of each job created by that `NomadJobGroup`

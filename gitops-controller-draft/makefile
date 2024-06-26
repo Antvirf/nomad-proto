@@ -3,12 +3,15 @@ purgeTestVars:
 	nomad var purge nomadops/v1/nomadjobgroup/testjob
 
 putvars:
-	nomad var put -force @test-jobspec.hcl
-	nomad var put -force @test-gitrepo.hcl
+	nomad var put -force @manifests/test-jobspec.hcl
+	nomad var put -force @manifests/test-gitrepo.hcl
 
 install:
-	go install antvirf/nomadops
+	cd nomad-gitops-operator && go install .
+
+run:
+	go run ./nomad-gitops-operator
 
 deploy:
-	nomad job run job-nomadops.nomad.hcl
+	nomad job run manifests/job-nomadops.nomad.hcl
 
