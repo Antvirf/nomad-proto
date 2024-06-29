@@ -114,4 +114,4 @@ n2b <-->g4
 - Partial callables or custom logging structs are worth considering for both controllers, as we end up repeating ourselves a lot at the moment
 - Significant room to reduce code repetition by creating some more generic functions for shared use between the different controllers
 - Integration tests against a local Nomad cluster should not be too difficult to set up
-
+- Consul also has a key/value store that may be worth exploring as an alternative to Nomad's variable store
